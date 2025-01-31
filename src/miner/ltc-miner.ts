@@ -3,7 +3,7 @@ import * as net from "net";
 import * as scrypt from "scrypt-js";
 
 export async function startMining() {
-  const startTime = new Date(); // Capture start time
+  const startTime = new Date();
   console.log(`⏳ Script started at: ${startTime.toLocaleString()}`);
 
   try {
@@ -32,13 +32,13 @@ export async function startMining() {
         method: "mining.subscribe",
         params: [],
       });
-      console.info("here login message :: ", loginMessage);
+      console.info("loginMessage :: ", loginMessage);
       client.write(`${loginMessage}\n`);
     });
 
     // Handle incoming data (jobs or responses from the pool)
     client.on("data", async (data: Buffer) => {
-      const dataStartTime = new Date(); // Capture start time for handling data
+      const dataStartTime = new Date();
       const dataString = data.toString();
       console.info("data :: ", dataString);
 
@@ -53,7 +53,7 @@ export async function startMining() {
             if (response.result) {
               console.log("✅ Successfully logged in to the pool.");
 
-              const authStartTime = new Date(); // Capture start time for authorization
+              const authStartTime = new Date();
               const authMessage = JSON.stringify({
                 id: 2,
                 method: "mining.authorize",
@@ -61,7 +61,7 @@ export async function startMining() {
               });
               console.info("authMessage :: ", authMessage);
               client.write(`${authMessage}\n`);
-              const authEndTime = new Date(); // Capture end time for authorization
+              const authEndTime = new Date();
               console.log(
                 `⏱️ Authorization duration: ${(authEndTime.getTime() - authStartTime.getTime()) / 1000} seconds`,
               );
@@ -87,7 +87,9 @@ export async function startMining() {
               let hashResult: Buffer;
 
               console.log("🔍 Trying nonce...");
-              const nonceStartTime = new Date(); // Capture start time for nonce finding
+
+              const nonceStartTime = new Date();
+              let totalHashes = 0; // To count the total number of hashes calculated
 
               while (!found) {
                 const nonceBuffer: Buffer = Buffer.alloc(4);
@@ -95,15 +97,24 @@ export async function startMining() {
                 const dataToHash: Buffer = Buffer.concat([blockHeaderBytes, nonceBuffer]);
 
                 hashResult = Buffer.from(await scrypt.scrypt(dataToHash, dataToHash, 1024, 1, 1, 32));
+                totalHashes++; // Increment hash count for every nonce trial
 
                 if (hashResult.readUInt32LE(0) === 0) {
                   found = true;
                 } else {
                   nonce++;
                 }
+
+                // Display hashrate and total hashes every 1000 hashes
+                if (totalHashes % 1000 === 0) {
+                  const elapsedTime = (new Date().getTime() - nonceStartTime.getTime()) / 1000; // Elapsed time in seconds
+                  const hashrate = totalHashes / elapsedTime; // Hashes per second (hashrate)
+                  console.log(`⏱️ Current Hashrate: ${hashrate.toFixed(2)} H/s`);
+                  console.log(`🔢 Total Hashes: ${totalHashes}`);
+                }
               }
 
-              const nonceEndTime = new Date(); // Capture end time for nonce finding
+              const nonceEndTime = new Date();
               console.log(`✅ Nonce found: ${nonce}`);
               console.log(
                 `⏱️ Nonce finding duration: ${(nonceEndTime.getTime() - nonceStartTime.getTime()) / 1000} seconds`,
@@ -124,7 +135,7 @@ export async function startMining() {
         }
       });
 
-      const dataEndTime = new Date(); // Capture end time for handling data
+      const dataEndTime = new Date();
       console.log(`⏱️ Data handling duration: ${(dataEndTime.getTime() - dataStartTime.getTime()) / 1000} seconds`);
     });
 
@@ -134,7 +145,7 @@ export async function startMining() {
   } catch (error) {
     console.error("❌ Error occurred during mining:", error);
   } finally {
-    const endTime = new Date(); // Capture final end time for the whole process
+    const endTime = new Date();
     const totalDuration = (endTime.getTime() - startTime.getTime()) / 1000;
     console.log(`✅ Script ended at: ${endTime.toLocaleString()}`);
     console.log(`⏱️ Total script duration: ${totalDuration} seconds`);
