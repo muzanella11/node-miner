@@ -2,21 +2,28 @@ import * as fs from "fs";
 import * as path from "path";
 
 // Function to choose the correct miner script based on the cryptocurrency
-function startMining(crypto: string) {
+async function startMining(crypto: string) {
   const minerFile = path.join(__dirname, `./miner/${crypto}-miner.ts`);
 
-  if (fs.existsSync(minerFile)) {
+  const startTime = new Date(); // Capture start time
+  console.log(`⏳ Script started at: ${startTime.toLocaleString()}`);
+  console.log(`🚀 Starting mining for ${crypto.toUpperCase()}...`);
+
+  try {
+    if (!fs.existsSync(minerFile)) {
+      throw new Error(`Miner script for ${crypto} not found!`);
+    }
+
     // Dynamically import the selected miner script
-    import(minerFile)
-      .then((minerModule) => {
-        console.log(`🚀 Starting mining for ${crypto.toUpperCase()}...`);
-        minerModule.startMining();
-      })
-      .catch((error) => {
-        console.error(`❌ Error loading miner script for ${crypto}:`, error);
-      });
-  } else {
-    console.log(`❌ Miner script for ${crypto} not found!`);
+    const minerModule = await import(minerFile);
+    await minerModule.startMining();
+  } catch (error: any) {
+    console.error(`❌ Error: ${error.message}`);
+  } finally {
+    const endTime = new Date(); // Capture end time
+    const duration = (endTime.getTime() - startTime.getTime()) / 1000; // Calculate duration in seconds
+    console.log(`✅ Script ended at: ${endTime.toLocaleString()}`);
+    console.log(`⏱️ Duration: ${duration} seconds`);
   }
 }
 
